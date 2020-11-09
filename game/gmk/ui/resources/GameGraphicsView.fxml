@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.layout.Pane?>
+
+<Pane fx:id="root" xmlns:fx="http://javafx.com/fxml/1" styleClass="holder" fx:controller="game.gmk.ui.GameGraphicsController">
+  <stylesheets>
+    <URL value="@gamegraphicsview.css"/>
+  </stylesheets>
+  <Canvas fx:id="gameLayer" ></Canvas>
+  <Canvas fx:id="bgLayer" ></Canvas>
+</Pane>
