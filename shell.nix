@@ -1,5 +1,8 @@
 { pkgs ? import <nixpkgs> {} }:
 
 pkgs.mkShell {
-  buildInputs = [ pkgs.jdk8 ];
+  buildInputs = with pkgs; [
+    jdk14
+    # jdt-language-server not yet in nixpkgs
+  ];
 }
