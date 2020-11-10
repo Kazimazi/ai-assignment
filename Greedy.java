@@ -65,7 +65,6 @@ public class Greedy extends GomokuPlayer {
 
         // store and do best step
         board[action.i][action.j] = color;
-        System.out.println("!!!!!" + score);
         return action;
     }
 
