@@ -115,5 +115,4 @@ public class Greedy extends GomokuPlayer {
         }
         return 1 + countDirection(ni, nj, di, dj, c);
     }
-
 }
