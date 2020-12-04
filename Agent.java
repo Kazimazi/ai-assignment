@@ -42,8 +42,7 @@ public class Agent extends GomokuPlayer {
         int score = Integer.MIN_VALUE; // -Inf
         for (GomokuAction a : actions) {
             if (board[a.i][a.j] == GomokuGame.EMPTY) {
-                int s = score(a.i, a.j, color) + score(a.i, a.j, 1 - color);
-                //int s = negamax(board, 2, color);
+                int s = negamax(board, 2, color);
                 if (score < s) {
                     score = s;
                     action = a;
@@ -120,27 +119,38 @@ public class Agent extends GomokuPlayer {
         Log("Actions: " + actions);
     }
 
-    //protected ArrayList<int[][]> potentialBoards(int[][] board, int color) {
-    //    ArrayList<int[][]> boards = new ArrayList<>();
-    //    for (GomokuAction action : actions) {
-    //        if (board[action.i][action.j] == GomokuGame.EMPTY) {
-    //            board[action.i][action.j] = color; // do the move
-    //            boards.add(board);
-    //            board[action.i][action.j] = GomokuGame.EMPTY; // take the move back
-    //        }
-    //    };
-    //    return boards;
-    //}
+    protected ArrayList<int[][]> potentialBoards(int[][] board, int color) {
+        ArrayList<int[][]> boards = new ArrayList<>();
+        for (GomokuAction action : actions) {
+            if (board[action.i][action.j] == GomokuGame.EMPTY) {
+                board[action.i][action.j] = color; // do the move
+                boards.add(board);
+                board[action.i][action.j] = GomokuGame.EMPTY; // take the move back
+            }
+        };
+        return boards;
+    }
 
-    //protected int negamax(int[][] board, int depth, int player) {
-    //    if (depth == 0 || GomokuGame.hasFive(board, color))
-    //        return color * Integer.MAX_VALUE; // TODO color x heuristic value of board
-    //    int value = Integer.MIN_VALUE;
-    //    for (int[][] child : potentialBoards(board, color)) {
-    //        value = Integer.max(value, -negamax(child, depth - 1, -color));
-    //    }
-    //    return value;
-    //}
+    protected int negamax(int[][] board, int depth, int player) {
+        if (depth == 0 || GomokuGame.hasFive(board, color))
+            return color * scoreBoard(board, color) + scoreBoard(board, 1 - color);
+        int value = Integer.MIN_VALUE;
+        for (int[][] child : potentialBoards(board, color)) {
+            value = Integer.max(value, -negamax(child, depth - 1, -color));
+        }
+        return value;
+    }
+
+    protected int score(int[][] board, int color) {
+        int result = 0;
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[i].length; j++) {
+                result = Integer.max(result, tryAction(new GomokuAction(i, j), color));
+                // DELME ne boarddal mukodjon hanem actionnal?
+            }
+        }
+        return result;
+    }
 
     /**
      * The score of a cell is the aggregated value of the any direction from
