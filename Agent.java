@@ -1,7 +1,7 @@
+//koffeintabletta,Koszo.Attila@stud.u-szeged.hu
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Random;
 
 import game.gmk.GomokuAction;
@@ -10,8 +10,7 @@ import game.gmk.GomokuPlayer;
 
 public class Agent extends GomokuPlayer {
     /** Array for all kinda good actions might not be tho. */
-    protected ArrayList<GomokuAction> actions = new ArrayList<GomokuAction>(); // make some kind of set for it
-    public HashMap<Integer, Integer[]> THREATS = new HashMap<>();
+    ArrayList<GomokuAction> actions = new ArrayList<GomokuAction>(); // make some kind of set for it
 
     // Threats
     // Winning
@@ -62,26 +61,15 @@ public class Agent extends GomokuPlayer {
 
     @Override
     public GomokuAction getAction(GomokuAction prevAction, long[] remainingTimes) {
-        if (prevAction == null) {
-            int i = board.length / 2;
-            int j = board[i].length / 2;
-            while (board[i][j] != GomokuGame.EMPTY) {
-                i = random.nextInt(board.length);
-                j = random.nextInt(board[i].length);
-            }
-            board[i][j] = color;
-            return new GomokuAction(i, j);
+        if (prevAction != null) {
+            board[prevAction.i][prevAction.j] = 1 - color;
         }
-
-        board[prevAction.i][prevAction.j] = 1 - color;
 
         GomokuAction action = null;
         double score = Double.MIN_VALUE; // -Inf
 
         for (GomokuAction a : actions) {
             if (board[a.i][a.j] == GomokuGame.EMPTY) {
-                //double s = scoreAction(board, a, color) + scoreAction(board, a, 1 - color);
-                //double s = 0.89 * scoreAction(board, a, color) + scoreAction(board, a, 1 - color);
                 double s = scoreAction(board, a, color) + 0.9 *  scoreAction(board, a, 1 - color);
                 if (score < s) {
                     score = s;
@@ -177,23 +165,16 @@ public class Agent extends GomokuPlayer {
         }
 
         ArrayList<Integer> threats = new ArrayList<Integer>();
-        threats.add(scoreThreat(horizontalThreat, a));
-        threats.add(scoreThreat(verticalThreat, a));
-        threats.add(scoreThreat(diagonalThreat1, a));
-        threats.add(scoreThreat(diagonalThreat2, a));
+        threats.add(scoreThreat(horizontalThreat, a, "h"));
+        threats.add(scoreThreat(verticalThreat, a, "v"));
+        threats.add(scoreThreat(diagonalThreat1, a, "d1"));
+        threats.add(scoreThreat(diagonalThreat2, a, "d2"));
 
         return threats;
     }
 
     /**
      * Calculates score of an action.
-     *      |
-     * #OO_OO_OO#
-     *  _____      (4,1)
-     *   _____    X(4,1)
-     *    _____   X(4,1)
-     *     _____   (4,2)
-     *      _____ X(4,2)
      * @param board that we observe
      * @param a is the given action
      * @param c color of player
@@ -211,41 +192,39 @@ public class Agent extends GomokuPlayer {
         return calculatedScore;
     }
 
-    int scoreThreat(int[] threat, GomokuAction a) {
-        int code = 0;
+    /** My ambigous scoring for a certain treat */
+    int scoreThreat(int[] threat, GomokuAction a, String s) {
+        int score = 0;
         if (Arrays.equals(threat, WINNINGFIVE))
-            code = 16;
+            score = 16;
         else if (Arrays.equals(threat, OPENFOUR))
-            code = 15;
+            score = 15;
         else if (Arrays.equals(threat, SIMPLEFOUR))
-            code = 14;
+            score = 14;
         else if (Arrays.equals(threat, OPENTHREE))
-            code = 13;
+            score = 13;
         else if (Arrays.equals(threat, BROKENTHREE))
-            code = 12;
+            score = 12;
         else if (Arrays.equals(threat, SIMPLETHREE))
-            code = 11;
+            score = 11;
         else if (Arrays.equals(threat, TWOINFOUR))
-            code = 10;
+            score = 10;
         else if (Arrays.equals(threat, TWOINTHREE))
-            code = 9;
+            score = 9;
         else if (Arrays.equals(threat, TWOINTWO))
-            code = 8;
+            score = 8;
         else if (Arrays.equals(threat, TWOINONE))
-            code = 7;
+            score = 7;
         else if (Arrays.equals(threat, ONEINFIVE))
-            code = 6;
+            score = 6;
         else if (Arrays.equals(threat, ONEINFOUR))
-            code = 5;
+            score = 5;
         else if (Arrays.equals(threat, ONEINTHREE))
-            code = 4;
+            score = 4;
         else if (Arrays.equals(threat, ONEINTWO))
-            code = 3;
+            score = 3;
         else if (Arrays.equals(threat, ONEINONE))
-            code = 2;
-        if (code == 0) {
-            System.out.println("> a: " + a + " | " + threat[0] + " " + threat[1]);
-        }
-        return code;
+            score = 2;
+        return score;
     }
 }
