@@ -1,3 +1,9 @@
 * How to run:
   - javac -cp game_engine.jar Agent.java
   - java -jar game_engine.jar 10 game.gmk.GomokuGame 1234567890 15 15 0.1 2000 Agent Agent
+
+* Debug with:
+  - javac -cp game_engine.jar Agent.java
+  - java -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=1044 -jar game_engine.jar 120 game.gmk.GomokuGame 2133264714 15 15 0.1 2000 Agent Agent
+  - jdb -attach 1044
+
