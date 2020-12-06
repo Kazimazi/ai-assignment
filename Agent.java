@@ -1,4 +1,7 @@
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Random;
 
 import game.gmk.GomokuAction;
@@ -8,7 +11,38 @@ import game.gmk.GomokuPlayer;
 public class Agent extends GomokuPlayer {
     /** Array for all kinda good actions might not be tho. */
     protected ArrayList<GomokuAction> actions = new ArrayList<GomokuAction>(); // make some kind of set for it
-    private boolean LOG = false;
+    public HashMap<Integer, Integer[]> THREATS = new HashMap<>();
+
+    // Threats
+    // Winning
+    int[] WINNINGFIVE = {5, 1};
+    int[] OPENFOUR = {4, 2};
+    // Forcing
+    int[] SIMPLEFOUR = {4, 1};
+    int[] OPENTHREE = {3, 3};
+    int[] BROKENTHREE = {3, 2};
+    // Non-forcing
+    int[] SIMPLETHREE = {3, 1};
+    /** Two that can be extended to five in 4 ways. */
+    int[] TWOINFOUR = {2, 4};
+    /** Two that can be extended to five in 3 ways. */
+    int[] TWOINTHREE = {2, 3};
+    /** Two that can be extended to five in 2 ways. */
+    int[] TWOINTWO = {2, 2};
+    /** Two that can be extended to five in 1 way. */
+    int[] TWOINONE = {2, 1};
+    /** One that can be extended to five in 5 ways. */
+    int[] ONEINFIVE = {1, 5};
+    /** One that can be extended to five in 4 ways. */
+    int[] ONEINFOUR = {1, 4};
+    /** One that can be extended to five in 3 ways. */
+    int[] ONEINTHREE = {1, 3};
+    /** One that can be extended to five in 2 ways. */
+    int[] ONEINTWO = {1, 2};
+    /** One that can be extended to five in 1 way. */
+    int[] ONEINONE = {1, 1};
+    /** No threat */
+    int NOTHREAT = 0;
 
     /**
      * Creates muh player, sets the specified parameters to the super class.
@@ -29,7 +63,6 @@ public class Agent extends GomokuPlayer {
     @Override
     public GomokuAction getAction(GomokuAction prevAction, long[] remainingTimes) {
         if (prevAction == null) {
-            // TODO you can do it better yeah?
             int i = board.length / 2;
             int j = board[i].length / 2;
             while (board[i][j] != GomokuGame.EMPTY) {
@@ -42,54 +75,177 @@ public class Agent extends GomokuPlayer {
 
         board[prevAction.i][prevAction.j] = 1 - color;
 
-        GomokuAction action = null; // init best move
-        int score = Integer.MIN_VALUE; // -Inf
-        for (GomokuAction a : actions) { // NOTE decrease number of actions
+        GomokuAction action = null;
+        double score = Double.MIN_VALUE; // -Inf
+
+        for (GomokuAction a : actions) {
             if (board[a.i][a.j] == GomokuGame.EMPTY) {
-                int s = negamax(board, 3, color); // TODO change depth according to remainingTimes, or state of game
+                //double s = scoreAction(board, a, color) + scoreAction(board, a, 1 - color);
+                //double s = 0.89 * scoreAction(board, a, color) + scoreAction(board, a, 1 - color);
+                double s = scoreAction(board, a, color) + 0.9 *  scoreAction(board, a, 1 - color);
                 if (score < s) {
                     score = s;
                     action = a;
                 }
             }
         }
-
-        board[action.i][action.j] = 1;
+        board[action.i][action.j] = color;
 
         return action;
     }
 
-    // TODO implement
-    protected int scorePosition(int[][] board, int color) {
-        return 0;
-    }
-
-    protected int[][] boardWithMove(int[][] board, GomokuAction action, int color) {
+    int[][] boardAfterAction(int[][] board, GomokuAction action, int color) {
         board[action.i][action.j] = color;
         return board;
     }
 
-    protected ArrayList<int[][]> getChildrenBoards(int[][] board, int color) {
-        ArrayList<int[][]> boards = new ArrayList<>();
-        for (GomokuAction action : actions) { // NOTE decrease number of actions
-            boards.add(boardWithMove(board, action, color));
+    /**
+     * From the given point to a given direction counts the consecutive non WALL/ENEMY tiles.
+     * @param board that we observe
+     * @param i row of start position
+     * @param j column of start position
+     * @param di row direction
+     * @param dj column direction
+     * @param c color of player
+     * @param timesCalled times it's called, if reaches 5 terminate and returns
+     * @param cCounter how many player colored tiles we found
+     * @return 0 if stepped on obstacle, 1-5 amount of player color tiles
+     */
+    int countDirection2(int[][] board, int i, int j, int di, int dj, int c, int timesCalled, int cCounter) {
+        int ni = (i + board.length + di) % board.length;
+        int nj = (j + board[ni].length + dj) % board[ni].length;
+        if (board[ni][nj] == GomokuGame.WALL || board[ni][nj] == 1 - c) {
+            return 0;
+        } else if (board[ni][nj] == c) {
+            cCounter++;
         }
-        return boards;
+        if (++timesCalled == 5) return cCounter;
+        return countDirection2(board, ni, nj, di, dj, c, timesCalled, cCounter);
     }
 
-    protected int negamax(int[][] board, int depth, int player) {
-        if (depth == 0 || GomokuGame.hasFive(board, color))
-            return color * scorePosition(board, color);
-        int value = Integer.MIN_VALUE;
-        for (int[][] child : getChildrenBoards(board, color)) {
-            value = Integer.max(value, -negamax(child, depth - 1, -color));
+    ArrayList<Integer> getThreats(int[][] board, GomokuAction a, int c) {
+        int[][] boardAfterAction = boardAfterAction(GomokuGame.copy(board), a, c);
+
+        int[] horizontalThreat = {0, 0};
+        int[] verticalThreat = {0, 0};
+        int[] diagonalThreat1 = {0, 0};
+        int[] diagonalThreat2 = {0, 0};
+
+        // From left to right
+        for (int j = a.j - 4; j <= a.j; j++) {
+            int sameColors = countDirection2(boardAfterAction, a.i, j - 1, 0, 1, c, 0, 0);
+            if (sameColors == horizontalThreat[0]) {
+                horizontalThreat[0] = sameColors;
+                horizontalThreat[1]++;
+            } else if (sameColors > horizontalThreat[0]){
+                horizontalThreat[0] = sameColors;
+                horizontalThreat[1] = 1;
+            }
         }
-        return value;
+        // From top to bottom
+        for (int i = a.i - 4; i <= a.i; i++) {
+            int sameColors = countDirection2(boardAfterAction, i - 1, a.j, 1, 0, c, 0, 0);
+            if (sameColors == verticalThreat[0]) {
+                verticalThreat[0] = sameColors;
+                verticalThreat[1]++;
+            } else if (sameColors > verticalThreat[0]){
+                verticalThreat[0] = sameColors;
+                verticalThreat[1] = 1;
+            }
+        }
+        // From top left to bottom right
+        for (int i = a.i - 4, j = a.j - 4; i <= a.i && j <= a.j; i++, j++) {
+            int sameColors = countDirection2(boardAfterAction, i - 1, j - 1, 1, 1, c, 0, 0);
+            if (sameColors == diagonalThreat1[0]) {
+                diagonalThreat1[0] = sameColors;
+                diagonalThreat1[1]++;
+            } else if (sameColors > diagonalThreat1[0]){
+                diagonalThreat1[0] = sameColors;
+                diagonalThreat1[1] = 1;
+            }
+        }
+        // From top right to bottom left
+        for (int i = a.i - 4, j = a.j + 4; i <= a.i && j >= a.j; i++, j--) {
+            int sameColors = countDirection2(boardAfterAction, i - 1, j + 1, 1, -1, c, 0, 0);
+            if (sameColors == diagonalThreat2[0]) {
+                diagonalThreat2[0] = sameColors;
+                diagonalThreat2[1]++;
+            } else if (sameColors > diagonalThreat2[0]){
+                diagonalThreat2[0] = sameColors;
+                diagonalThreat2[1] = 1;
+            }
+        }
+
+        ArrayList<Integer> threats = new ArrayList<Integer>();
+        threats.add(scoreThreat(horizontalThreat, a));
+        threats.add(scoreThreat(verticalThreat, a));
+        threats.add(scoreThreat(diagonalThreat1, a));
+        threats.add(scoreThreat(diagonalThreat2, a));
+
+        return threats;
     }
 
-    private void Log(String string) {
-        if (LOG)
-            System.out.println("~~~" + string);
+    /**
+     * Calculates score of an action.
+     *      |
+     * #OO_OO_OO#
+     *  _____      (4,1)
+     *   _____    X(4,1)
+     *    _____   X(4,1)
+     *     _____   (4,2)
+     *      _____ X(4,2)
+     * @param board that we observe
+     * @param a is the given action
+     * @param c color of player
+     * @return score worthy (or not) of a best action
+     */
+    double scoreAction(int[][] board, GomokuAction a, int c) {
+        ArrayList<Integer> threats = getThreats(board, a, c);
+
+        Collections.sort(threats);
+        int bestScore = threats.get(3);
+        int secondBestScore = threats.get(2);
+
+        double calculatedScore = 1.5 * Math.pow(1.8, bestScore) + Math.pow(1.8, secondBestScore);
+
+        return calculatedScore;
+    }
+
+    int scoreThreat(int[] threat, GomokuAction a) {
+        int code = 0;
+        if (Arrays.equals(threat, WINNINGFIVE))
+            code = 16;
+        else if (Arrays.equals(threat, OPENFOUR))
+            code = 15;
+        else if (Arrays.equals(threat, SIMPLEFOUR))
+            code = 14;
+        else if (Arrays.equals(threat, OPENTHREE))
+            code = 13;
+        else if (Arrays.equals(threat, BROKENTHREE))
+            code = 12;
+        else if (Arrays.equals(threat, SIMPLETHREE))
+            code = 11;
+        else if (Arrays.equals(threat, TWOINFOUR))
+            code = 10;
+        else if (Arrays.equals(threat, TWOINTHREE))
+            code = 9;
+        else if (Arrays.equals(threat, TWOINTWO))
+            code = 8;
+        else if (Arrays.equals(threat, TWOINONE))
+            code = 7;
+        else if (Arrays.equals(threat, ONEINFIVE))
+            code = 6;
+        else if (Arrays.equals(threat, ONEINFOUR))
+            code = 5;
+        else if (Arrays.equals(threat, ONEINTHREE))
+            code = 4;
+        else if (Arrays.equals(threat, ONEINTWO))
+            code = 3;
+        else if (Arrays.equals(threat, ONEINONE))
+            code = 2;
+        if (code == 0) {
+            System.out.println("> a: " + a + " | " + threat[0] + " " + threat[1]);
+        }
+        return code;
     }
 }
-
