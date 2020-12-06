@@ -12,15 +12,15 @@ public class Agent extends GomokuPlayer {
     /** Array for all kinda good actions might not be tho. */
     ArrayList<GomokuAction> actions = new ArrayList<GomokuAction>(); // make some kind of set for it
 
-    // Threats
-    // Winning
+    // Fenyegetesek
+    // nyero
     int[] WINNINGFIVE = {5, 1};
     int[] OPENFOUR = {4, 2};
-    // Forcing
+    // kenyszerito
     int[] SIMPLEFOUR = {4, 1};
     int[] OPENTHREE = {3, 3};
     int[] BROKENTHREE = {3, 2};
-    // Non-forcing
+    // nem kenyszerito
     int[] SIMPLETHREE = {3, 1};
     /** Two that can be extended to five in 4 ways. */
     int[] TWOINFOUR = {2, 4};
@@ -44,10 +44,10 @@ public class Agent extends GomokuPlayer {
     int NOTHREAT = 0;
 
     /**
-     * Creates muh player, sets the specified parameters to the super class.
-     * @param color player's color
-     * @param board game board
-     * @param random random number generator
+     * init player, actions
+     * @param color jatekos szine
+     * @param board jatektabla
+     * @param random random szam generalo
      * @see GomokuPlayer#GomokuPlayer(int, int[][], Random)
      */
     public Agent(int color, int[][] board, Random random) {
@@ -82,22 +82,29 @@ public class Agent extends GomokuPlayer {
         return action;
     }
 
+    /**
+     * Csinal egy boardot adott lepessel.
+     * @param board
+     * @param action
+     * @param color
+     * @return board extra lepessel
+     */
     int[][] boardAfterAction(int[][] board, GomokuAction action, int color) {
         board[action.i][action.j] = color;
         return board;
     }
 
     /**
-     * From the given point to a given direction counts the consecutive non WALL/ENEMY tiles.
-     * @param board that we observe
-     * @param i row of start position
-     * @param j column of start position
-     * @param di row direction
-     * @param dj column direction
-     * @param c color of player
-     * @param timesCalled times it's called, if reaches 5 terminate and returns
-     * @param cCounter how many player colored tiles we found
-     * @return 0 if stepped on obstacle, 1-5 amount of player color tiles
+     * Megszamolja hogy egy osszefuggo TILE 5-osben mennyi *c* jatekos szin van, ha van koztuk WALL/ENEMY TILE akkor 0-al.
+     * @param board tabla
+     * @param i sor
+     * @param j oszlop
+     * @param di sor mennyivel valtozzon rekurzionkent
+     * @param dj oszlop mennyivel valtozzon rekurzionkent
+     * @param c jatekos szine
+     * @param timesCalled kilepesi feltetelhez szamoljuk hanyszor futott
+     * @param cCounter visszateresi ertek 0-tol 5-ig
+     * @return cCounter
      */
     int countDirection2(int[][] board, int i, int j, int di, int dj, int c, int timesCalled, int cCounter) {
         int ni = (i + board.length + di) % board.length;
@@ -111,6 +118,13 @@ public class Agent extends GomokuPlayer {
         return countDirection2(board, ni, nj, di, dj, c, timesCalled, cCounter);
     }
 
+    /**
+     * Fenyegeteseket szamolja egy adott mezore.
+     * @param board
+     * @param a action
+     * @param c jatekos szine
+     * @return threat 4-es egy adott mezore (a)
+     */
     ArrayList<Integer> getThreats(int[][] board, GomokuAction a, int c) {
         int[][] boardAfterAction = boardAfterAction(GomokuGame.copy(board), a, c);
 
@@ -119,7 +133,7 @@ public class Agent extends GomokuPlayer {
         int[] diagonalThreat1 = {0, 0};
         int[] diagonalThreat2 = {0, 0};
 
-        // From left to right
+        // nyugat-kelet sor
         for (int j = a.j - 4; j <= a.j; j++) {
             int sameColors = countDirection2(boardAfterAction, a.i, j - 1, 0, 1, c, 0, 0);
             if (sameColors == horizontalThreat[0]) {
@@ -130,7 +144,7 @@ public class Agent extends GomokuPlayer {
                 horizontalThreat[1] = 1;
             }
         }
-        // From top to bottom
+        // eszak-del oszlop
         for (int i = a.i - 4; i <= a.i; i++) {
             int sameColors = countDirection2(boardAfterAction, i - 1, a.j, 1, 0, c, 0, 0);
             if (sameColors == verticalThreat[0]) {
@@ -141,7 +155,7 @@ public class Agent extends GomokuPlayer {
                 verticalThreat[1] = 1;
             }
         }
-        // From top left to bottom right
+        // eszaknyugat-delkelet atlo
         for (int i = a.i - 4, j = a.j - 4; i <= a.i && j <= a.j; i++, j++) {
             int sameColors = countDirection2(boardAfterAction, i - 1, j - 1, 1, 1, c, 0, 0);
             if (sameColors == diagonalThreat1[0]) {
@@ -152,7 +166,7 @@ public class Agent extends GomokuPlayer {
                 diagonalThreat1[1] = 1;
             }
         }
-        // From top right to bottom left
+        // eszakkelet-delnyugat atlo
         for (int i = a.i - 4, j = a.j + 4; i <= a.i && j >= a.j; i++, j--) {
             int sameColors = countDirection2(boardAfterAction, i - 1, j + 1, 1, -1, c, 0, 0);
             if (sameColors == diagonalThreat2[0]) {
@@ -165,20 +179,20 @@ public class Agent extends GomokuPlayer {
         }
 
         ArrayList<Integer> threats = new ArrayList<Integer>();
-        threats.add(scoreThreat(horizontalThreat, a, "h"));
-        threats.add(scoreThreat(verticalThreat, a, "v"));
-        threats.add(scoreThreat(diagonalThreat1, a, "d1"));
-        threats.add(scoreThreat(diagonalThreat2, a, "d2"));
+        threats.add(scoreThreat(horizontalThreat));
+        threats.add(scoreThreat(verticalThreat));
+        threats.add(scoreThreat(diagonalThreat1));
+        threats.add(scoreThreat(diagonalThreat2));
 
         return threats;
     }
 
     /**
-     * Calculates score of an action.
-     * @param board that we observe
-     * @param a is the given action
-     * @param c color of player
-     * @return score worthy (or not) of a best action
+     * Kiszamolja egy action-nek milyen "eros".
+     * @param board
+     * @param a action
+     * @param c jatekosz szine
+     * @return score of action
      */
     double scoreAction(int[][] board, GomokuAction a, int c) {
         ArrayList<Integer> threats = getThreats(board, a, c);
@@ -192,8 +206,12 @@ public class Agent extends GomokuPlayer {
         return calculatedScore;
     }
 
-    /** My ambigous scoring for a certain treat */
-    int scoreThreat(int[] threat, GomokuAction a, String s) {
+    /**
+     * Egy fenyegetestipushoz pontot rendel.
+     * @param threat ertekpar ami egyertelmuen leirja a fenyegetes ripusat
+     * @return pontszama a fenyegetesnek
+     */
+    int scoreThreat(int[] threat) {
         int score = 0;
         if (Arrays.equals(threat, WINNINGFIVE))
             score = 16;
